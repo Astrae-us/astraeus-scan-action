@@ -1,0 +1,41 @@
+name: 'Astraeus Attack Surface Scan'
+description: 'Scan a domain for public exposure (exposed .env/.git, admin panels, debug endpoints, TLS issues) on every push or PR.'
+author: 'Astraeus'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  domain:
+    description: 'Domain to scan (e.g. example.com). Only scan domains you own or are authorized to assess.'
+    required: true
+  fail-on:
+    description: 'Minimum severity that fails the build: critical | high | medium | low | none'
+    required: false
+    default: 'high'
+  api-url:
+    description: 'Astraeus API base URL (override for self-hosted).'
+    required: false
+    default: 'https://astrae.us/api/v1'
+
+outputs:
+  total-findings:
+    description: 'Total number of findings surfaced by the scan.'
+    value: ${{ steps.scan.outputs.total_findings }}
+  critical:
+    description: 'Number of critical findings.'
+    value: ${{ steps.scan.outputs.critical }}
+  high:
+    description: 'Number of high findings.'
+    value: ${{ steps.scan.outputs.high }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: scan
+      shell: bash
+      run: ${{ github.action_path }}/scan.sh
+      env:
+        INPUT_DOMAIN: ${{ inputs.domain }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_API_URL: ${{ inputs.api-url }}
