@@ -40,10 +40,20 @@ total = d.get("total_findings", 0)
 summary = d.get("summary", "")
 top = d.get("top_findings", []) or []
 
+# Deep links: the shareable result page (rich findings + evidence) and a signup
+# pre-filled to monitor this exact domain — so CI failures lead somewhere useful.
+from urllib.parse import quote
+report_url = d.get("share_url") or "https://astrae.us/tools/scan"
+monitor_url = (
+    "https://astrae.us/auth/login?intent=start&utm_source=github-action&next="
+    + quote(f"/dashboard/domains?add={domain}", safe="")
+)
+
 print(f"\nResult for {domain}: {summary}")
 print("Severity: " + ", ".join(f"{s}={sc.get(s, 0)}" for s in order))
 for f in top:
     print(f"  - [{f.get('severity','')}] {f.get('title','')}")
+print(f"Full report: {report_url}")
 
 # GitHub outputs
 out = os.environ.get("GITHUB_OUTPUT")
@@ -65,7 +75,10 @@ if step:
             fh.write("\n**Top findings**\n\n")
             for f in top:
                 fh.write(f"- **{f.get('severity','')}** — {f.get('title','')}\n")
-        fh.write("\n[See the full report on Astraeus →](https://astrae.us/tools/scan)\n")
+        fh.write(
+            f"\n[See the full report →]({report_url}) &nbsp;·&nbsp; "
+            f"[Monitor `{domain}` continuously →]({monitor_url})\n"
+        )
 
 if fail_on == "none":
     sys.exit(0)

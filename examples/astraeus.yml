@@ -1,0 +1,16 @@
+# Copy this into .github/workflows/astraeus.yml in your repo.
+name: Attack surface
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * *'   # also run daily at 06:00 UTC
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Astraeus attack surface scan
+        uses: Astrae-us/astraeus-scan-action@v1
+        with:
+          domain: example.com     # a domain you own / are authorized to assess
+          fail-on: high           # critical | high | medium | low | none
