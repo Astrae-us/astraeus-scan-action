@@ -9,7 +9,7 @@ DOMAIN="${INPUT_DOMAIN:?domain input is required}"
 FAIL_ON="${INPUT_FAIL_ON:-high}"
 API="${INPUT_API_URL:-https://astrae.us/api/v1}"
 
-echo "🔭 Astraeus scanning ${DOMAIN} ..."
+echo "Astraeus: scanning ${DOMAIN}"
 
 if ! resp="$(curl -sS --max-time 120 -X POST "${API}/tools/scan" \
       -H 'content-type: application/json' \
@@ -40,8 +40,7 @@ total = d.get("total_findings", 0)
 summary = d.get("summary", "")
 top = d.get("top_findings", []) or []
 
-# Deep links: the shareable result page (rich findings + evidence) and a signup
-# pre-filled to monitor this exact domain — so CI failures lead somewhere useful.
+# Full result page + a signup pre-filled to monitor this domain.
 from urllib.parse import quote
 report_url = d.get("share_url") or "https://astrae.us/tools/scan"
 monitor_url = (
@@ -67,7 +66,7 @@ if out:
 step = os.environ.get("GITHUB_STEP_SUMMARY")
 if step:
     with open(step, "a") as fh:
-        fh.write(f"## 🔭 Astraeus scan: `{domain}`\n\n{summary}\n\n")
+        fh.write(f"## Astraeus scan: `{domain}`\n\n{summary}\n\n")
         fh.write("| Severity | Count |\n|---|---:|\n")
         for s in order:
             fh.write(f"| {s} | {sc.get(s, 0)} |\n")
@@ -88,5 +87,5 @@ bad = sum(sc.get(s, 0) for s in order[: thresh + 1])
 if bad > 0:
     print(f"\n::error::{bad} finding(s) at or above '{fail_on}' — failing the build.")
     sys.exit(1)
-print(f"\n✅ No findings at or above '{fail_on}'.")
+print(f"\nNo findings at or above '{fail_on}'.")
 PY

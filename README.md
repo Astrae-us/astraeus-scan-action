@@ -1,54 +1,109 @@
-# Astraeus Attack Surface Scan — GitHub Action
+# Astraeus Attack Surface Scan
+
+[![Release](https://img.shields.io/github/v/tag/Astrae-us/astraeus-scan-action?sort=semver&label=release&color=1f6feb&logo=github)](https://github.com/Astrae-us/astraeus-scan-action/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f6feb.svg)](./LICENSE)
+[![Astraeus](https://img.shields.io/badge/by-Astraeus-1f6feb)](https://astrae.us)
 
 Scan a domain for public exposure on every push or PR, and fail the build when
-new exposure appears. Catches the classics an attacker checks first: exposed
-`.env` / `.git`, admin panels, debug endpoints, listable buckets, and TLS
-problems.
+new exposure appears. It checks the paths an attacker probes first — exposed
+`.env` / `.git`, admin panels, debug endpoints, listable cloud buckets, and TLS
+problems — and needs **no API key** (it uses the free Astraeus public scan).
 
-No API key required — it uses the free public scan.
-
-## Usage
+## Quick start
 
 ```yaml
+# .github/workflows/astraeus.yml
 name: Attack surface
-on:
-  push:
-  schedule:
-    - cron: '0 6 * * *'   # also run daily
+on: [push, pull_request]
 jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
       - uses: Astrae-us/astraeus-scan-action@v1
         with:
-          domain: example.com   # a domain you own / are authorized to assess
-          fail-on: high         # critical | high | medium | low | none
+          domain: example.com
+          fail-on: high
 ```
 
 ## Inputs
 
-| Input | Default | Description |
-|-------|---------|-------------|
-| `domain` | — (required) | Domain to scan. Only scan domains you own or are authorized to assess. |
-| `fail-on` | `high` | Minimum severity that fails the build (`critical`/`high`/`medium`/`low`/`none`). |
-| `api-url` | `https://astrae.us/api/v1` | API base (override for self-hosted). |
+| Input | Required | Default | Description |
+|-------|:--------:|---------|-------------|
+| `domain` | yes | — | Domain to scan. Only scan domains you own or are authorized to assess. |
+| `fail-on` | no | `high` | Minimum severity that fails the build: `critical`, `high`, `medium`, `low`, or `none`. |
+| `api-url` | no | `https://astrae.us/api/v1` | API base URL (override for self-hosted). |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| `total-findings` | Total findings surfaced. |
-| `critical` / `high` | Count per severity. |
+| `total-findings` | Total findings surfaced by the scan. |
+| `critical` | Number of critical findings. |
+| `high` | Number of high findings. |
 
-Each run writes a summary table to the job's **Step Summary**. A transient API
-error never fails your pipeline (it warns and skips). The public scan is a
-one-shot teaser; sign up at [astrae.us](https://astrae.us) for continuous
-monitoring, full evidence, and change alerts across your whole surface.
+## Examples
 
----
+Gate a deploy on a clean critical result:
 
-**Publishing (maintainer):** this action lives at `integrations/github-action/`
-in the main repo. To publish to the GitHub Marketplace, push this directory to
-`github.com/Astrae-us/astraeus-scan-action`, tag it `v1`, and click "Publish
-this Action" on the release. Consumers then reference
-`Astrae-us/astraeus-scan-action@v1`.
+```yaml
+- id: scan
+  uses: Astrae-us/astraeus-scan-action@v1
+  with:
+    domain: example.com
+    fail-on: critical
+- run: ./deploy.sh
+  if: steps.scan.outputs.critical == '0'
+```
+
+Audit mode — report without failing the build:
+
+```yaml
+- uses: Astrae-us/astraeus-scan-action@v1
+  with:
+    domain: example.com
+    fail-on: none
+```
+
+Scan several domains with a matrix:
+
+```yaml
+strategy:
+  matrix:
+    domain: [example.com, api.example.com, staging.example.com]
+steps:
+  - uses: Astrae-us/astraeus-scan-action@v1
+    with:
+      domain: ${{ matrix.domain }}
+```
+
+A full workflow is in [`examples/astraeus.yml`](./examples/astraeus.yml).
+
+## Output
+
+Each run writes a severity table and the top findings to the job's **Step
+Summary**, with links to the full report and to continuous monitoring. Findings
+at or above `fail-on` exit non-zero; a transient API or network error warns and
+skips, so a blip never breaks your pipeline.
+
+## How it works
+
+A composite action: [`scan.sh`](./scan.sh) POSTs the domain to the Astraeus
+public scan API and maps the result to the step summary, outputs, and exit code.
+That's the whole thing — it's short enough to read in a minute.
+
+## Security
+
+The action reads no repository secrets and stores no credentials; it sends only
+the domain you pass. See [SECURITY.md](./SECURITY.md) for details and how to
+report a vulnerability.
+
+## About
+
+[Astraeus](https://astrae.us) is external attack surface monitoring for small
+teams: continuous discovery, exposure detection, and change alerts. This action
+is the one-shot CI version — a [free account](https://astrae.us) adds continuous
+scans, full evidence, and alerts across your whole surface.
+
+## License
+
+[MIT](./LICENSE)
