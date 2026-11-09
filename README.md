@@ -9,6 +9,24 @@ new exposure appears. It checks the paths an attacker probes first — exposed
 `.env` / `.git`, admin panels, debug endpoints, listable cloud buckets, and TLS
 problems — and needs **no API key** (it uses the free Astraeus public scan).
 
+## What it checks, and what it does not
+
+This runs the free one-shot scan against **the apex domain**:
+
+- 79 known-sensitive paths (`.env`, `.git`, admin panels, debug endpoints, …)
+- SPF and DMARC
+- TLS certificate validity and days to expiry
+- Anonymously listable cloud buckets
+- How many hosts appear in certificate transparency logs
+
+It does **not** probe subdomains, scan ports, or fingerprint software versions.
+So a green run means "nothing exposed on the apex, in what a one-shot scan can
+reach" — not "nothing exposed". A `.git` directory served by `wiki.example.com`,
+an open database port, or a known CVE on a service version are all outside what
+this can see; every run prints that caveat so a pass is never mistaken for a
+clean bill of health. Continuous monitoring across every host is what an
+[account](https://astrae.us) adds.
+
 ## Quick start
 
 ```yaml

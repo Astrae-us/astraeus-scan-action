@@ -11,7 +11,14 @@ API="${INPUT_API_URL:-https://astrae.us/api/v1}"
 
 echo "Astraeus: scanning ${DOMAIN}"
 
+# The User-Agent is the only way Action adoption can be counted: the request
+# arrives at a public endpoint that anyone may call, so without it a run here is
+# indistinguishable from any other curl and "is anyone using this?" has no
+# answer. Nothing about the repository, workflow or token is sent.
+UA="astraeus-scan-action/1.0 (+https://github.com/Astrae-us/astraeus-scan-action)"
+
 if ! resp="$(curl -sS --max-time 120 -X POST "${API}/tools/scan" \
+      -A "${UA}" \
       -H 'content-type: application/json' \
       -d "{\"domain\":\"${DOMAIN}\"}")"; then
   echo "::warning::Astraeus scan request failed (network/timeout); skipping without failing the build."
@@ -54,6 +61,18 @@ for f in top:
     print(f"  - [{f.get('severity','')}] {f.get('title','')}")
 print(f"Full report: {report_url}")
 
+# A pass has to state its scope or it is read as a clean bill of health. This
+# is the free one-shot scan: it probes the APEX. A subdomain serving its .git
+# directory, an open database port or a known CVE on a service version are all
+# outside what it can see, so "no findings" here is not "nothing exposed".
+SCOPE = (
+    "Scope: the apex domain only — sensitive paths, SPF/DMARC, TLS expiry and "
+    "public buckets. Subdomains, open ports and software versions are not "
+    "checked, so this cannot see an exposed file on a subdomain or a known CVE "
+    "on a service. Continuous monitoring across every host is what an account adds."
+)
+print(SCOPE)
+
 # GitHub outputs
 out = os.environ.get("GITHUB_OUTPUT")
 if out:
@@ -74,6 +93,7 @@ if step:
             fh.write("\n**Top findings**\n\n")
             for f in top:
                 fh.write(f"- **{f.get('severity','')}** — {f.get('title','')}\n")
+        fh.write(f"\n_{SCOPE}_\n")
         fh.write(
             f"\n[See the full report →]({report_url}) &nbsp;·&nbsp; "
             f"[Monitor `{domain}` continuously →]({monitor_url})\n"
@@ -87,5 +107,5 @@ bad = sum(sc.get(s, 0) for s in order[: thresh + 1])
 if bad > 0:
     print(f"\n::error::{bad} finding(s) at or above '{fail_on}' — failing the build.")
     sys.exit(1)
-print(f"\nNo findings at or above '{fail_on}'.")
+print(f"\nNo findings at or above '{fail_on}' in what this scan reaches.")
 PY
